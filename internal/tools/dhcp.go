@@ -1,0 +1,67 @@
+package tools
+
+import (
+	"context"
+	"fmt"
+	"strings"
+
+	"github.com/lloydmcl/pihole-mcp/internal/format"
+	"github.com/lloydmcl/pihole-mcp/internal/pihole"
+	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/mark3labs/mcp-go/server"
+)
+
+// RegisterDHCP registers DHCP lease management tools.
+func RegisterDHCP(s *server.MCPServer, c *pihole.Client) {
+	addTool(s, mcp.NewTool("pihole_dhcp_leases",
+		mcp.WithDescription("Active DHCP leases: IP, hostname, MAC address, and expiry. Empty if Pi-hole's DHCP server is disabled."),
+		mcp.WithReadOnlyHintAnnotation(true),
+	), dhcpLeasesHandler(c))
+
+	addTool(s, mcp.NewTool("pihole_dhcp_delete_lease",
+		mcp.WithDescription("Remove an active DHCP lease by IP address. Only works when Pi-hole's DHCP server is enabled."),
+		mcp.WithString("ip", mcp.Required(), mcp.Description("IP address of the lease to remove.")),
+		mcp.WithDestructiveHintAnnotation(true),
+		mcp.WithIdempotentHintAnnotation(true),
+	), dhcpDeleteLeaseHandler(c))
+}
+
+func dhcpLeasesHandler(c *pihole.Client) server.ToolHandlerFunc {
+	return func(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		var result pihole.DHCPLeasesResponse
+		if err := c.Get(ctx, "/dhcp/leases", &result); err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to get leases: %v", err)), nil
+		}
+
+		if len(result.Leases) == 0 {
+			return mcp.NewToolResultText("No active DHCP leases (DHCP server may be disabled)."), nil
+		}
+
+		var b strings.Builder
+		fmt.Fprintf(&b, "**%d leases:**\n", len(result.Leases))
+		for _, l := range result.Leases {
+			expiry := "never"
+			if l.Expires > 0 {
+				expiry = format.Timestamp(float64(l.Expires))
+			}
+			fmt.Fprintf(&b, "- %s — %s (%s) expires %s\n", l.IP, l.Name, l.HWAddr, expiry)
+		}
+
+		return mcp.NewToolResultText(b.String()), nil
+	}
+}
+
+func dhcpDeleteLeaseHandler(c *pihole.Client) server.ToolHandlerFunc {
+	return func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		ip, err := req.RequireString("ip")
+		if err != nil {
+			return mcp.NewToolResultError("Parameter 'ip' is required"), nil
+		}
+
+		if err := c.Delete(ctx, "/dhcp/leases/"+ip); err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to delete lease: %v", err)), nil
+		}
+
+		return mcp.NewToolResultText(fmt.Sprintf("**Deleted** lease for %s.", ip)), nil
+	}
+}

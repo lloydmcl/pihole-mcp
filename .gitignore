@@ -1,0 +1,37 @@
+# Binaries
+/pihole-mcp
+bin/
+dist/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test binary
+*.test
+
+# Output of go coverage/profiling
+*.out
+*.prof
+coverage.html
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Coverage
+*.coverprofile
+
+# Temporary
+*.tmp
+*.temp
+
+# Environment
+.env
+.env.local

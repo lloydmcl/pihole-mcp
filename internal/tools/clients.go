@@ -1,0 +1,172 @@
+package tools
+
+import (
+	"context"
+	"fmt"
+	"strings"
+
+	"github.com/lloydmcl/pihole-mcp/internal/format"
+	"github.com/lloydmcl/pihole-mcp/internal/pihole"
+	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/mark3labs/mcp-go/server"
+)
+
+// RegisterClients registers client management tools.
+func RegisterClients(s *server.MCPServer, c *pihole.Client) {
+	addTool(s, mcp.NewTool("pihole_clients_list",
+		mcp.WithDescription("List configured clients with their group assignments. Clients can be identified by IP, MAC, hostname, subnet, or interface."),
+		mcp.WithString("client", mcp.Description("Specific client to look up (IP, MAC, hostname).")),
+		formatParam,
+		mcp.WithReadOnlyHintAnnotation(true),
+	), clientsListHandler(c))
+
+	addTool(s, mcp.NewTool("pihole_clients_suggestions",
+		mcp.WithDescription("Unconfigured network clients seen by Pi-hole that don't have group assignments yet. Useful for discovering new devices."),
+		mcp.WithReadOnlyHintAnnotation(true),
+	), clientsSuggestionsHandler(c))
+
+	addTool(s, mcp.NewTool("pihole_clients_add",
+		mcp.WithDescription("Add a client by IP, MAC, hostname, CIDR subnet, or interface name (prefixed with colon, e.g. :eth0)."),
+		mcp.WithString("client", mcp.Required(), mcp.Description("Client identifier.")),
+		mcp.WithString("comment", mcp.Description("Optional comment.")),
+		mcp.WithOpenWorldHintAnnotation(true),
+	), clientsAddHandler(c))
+
+	addTool(s, mcp.NewTool("pihole_clients_update",
+		mcp.WithDescription("Update a configured client's comment or group assignments."),
+		mcp.WithString("client", mcp.Required(), mcp.Description("Client identifier.")),
+		mcp.WithString("comment", mcp.Description("Updated comment.")),
+		mcp.WithIdempotentHintAnnotation(true),
+	), clientsUpdateHandler(c))
+
+	addTool(s, mcp.NewTool("pihole_clients_delete",
+		mcp.WithDescription("Remove a configured client. The device remains on the network but loses group-based blocking rules."),
+		mcp.WithString("client", mcp.Required(), mcp.Description("Client identifier to remove.")),
+		mcp.WithDestructiveHintAnnotation(true),
+		mcp.WithIdempotentHintAnnotation(true),
+	), clientsDeleteHandler(c))
+}
+
+func clientsListHandler(c *pihole.Client) server.ToolHandlerFunc {
+	return func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		path := "/clients"
+		if client := req.GetString("client", ""); client != "" {
+			path += "/" + client
+		}
+
+		var result pihole.ClientsResponse
+		if err := c.Get(ctx, path, &result); err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to list clients: %v", err)), nil
+		}
+
+		if len(result.Clients) == 0 {
+			return mcp.NewToolResultText("No configured clients."), nil
+		}
+
+		if wantCSV(req) {
+			headers := []string{"Client", "Name", "Comment", "Groups"}
+			rows := make([][]string, 0, len(result.Clients))
+			for _, cl := range result.Clients {
+				rows = append(rows, []string{cl.Client, cl.Name, cl.Comment, fmt.Sprintf("%v", cl.Groups)})
+			}
+			return mcp.NewToolResultText(format.CSV(headers, rows)), nil
+		}
+
+		var b strings.Builder
+		fmt.Fprintf(&b, "**%d clients:**\n", len(result.Clients))
+		for _, cl := range result.Clients {
+			fmt.Fprintf(&b, "- %s", cl.Client)
+			if cl.Name != "" {
+				fmt.Fprintf(&b, " (%s)", cl.Name)
+			}
+			if cl.Comment != "" {
+				fmt.Fprintf(&b, " — %s", cl.Comment)
+			}
+			fmt.Fprintf(&b, " [groups: %v]\n", cl.Groups)
+		}
+
+		return mcp.NewToolResultText(b.String()), nil
+	}
+}
+
+func clientsSuggestionsHandler(c *pihole.Client) server.ToolHandlerFunc {
+	return func(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		var result pihole.ClientSuggestionsResponse
+		if err := c.Get(ctx, "/clients/_suggestions", &result); err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to get suggestions: %v", err)), nil
+		}
+
+		if len(result.Clients) == 0 {
+			return mcp.NewToolResultText("No unconfigured clients found."), nil
+		}
+
+		var b strings.Builder
+		fmt.Fprintf(&b, "**%d unconfigured clients:**\n", len(result.Clients))
+		for _, cl := range result.Clients {
+			mac := format.StringOr(cl.HWAddr, "unknown MAC")
+			vendor := format.StringOr(cl.MacVendor, "")
+			ips := format.StringOr(cl.Addresses, "no IPs")
+			names := format.StringOr(cl.Names, "")
+
+			fmt.Fprintf(&b, "- %s", mac)
+			if vendor != "" {
+				fmt.Fprintf(&b, " (%s)", vendor)
+			}
+			fmt.Fprintf(&b, " — %s", ips)
+			if names != "" {
+				fmt.Fprintf(&b, " [%s]", names)
+			}
+			b.WriteString("\n")
+		}
+
+		return mcp.NewToolResultText(b.String()), nil
+	}
+}
+
+func clientsAddHandler(c *pihole.Client) server.ToolHandlerFunc {
+	return func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		client, _ := req.RequireString("client")
+
+		body := map[string]any{"client": client}
+		if comment := req.GetString("comment", ""); comment != "" {
+			body["comment"] = comment
+		}
+
+		var result pihole.ClientsResponse
+		if err := c.Post(ctx, "/clients", body, &result); err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to add client: %v", err)), nil
+		}
+
+		return mcp.NewToolResultText(fmt.Sprintf("**Added** client %s.", client)), nil
+	}
+}
+
+func clientsUpdateHandler(c *pihole.Client) server.ToolHandlerFunc {
+	return func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		client, _ := req.RequireString("client")
+
+		body := make(map[string]any)
+		if comment := req.GetString("comment", ""); comment != "" {
+			body["comment"] = comment
+		}
+
+		var result pihole.ClientsResponse
+		if err := c.Put(ctx, "/clients/"+client, body, &result); err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to update client: %v", err)), nil
+		}
+
+		return mcp.NewToolResultText(fmt.Sprintf("**Updated** client %s.", client)), nil
+	}
+}
+
+func clientsDeleteHandler(c *pihole.Client) server.ToolHandlerFunc {
+	return func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		client, _ := req.RequireString("client")
+
+		if err := c.Delete(ctx, "/clients/"+client); err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to delete client: %v", err)), nil
+		}
+
+		return mcp.NewToolResultText(fmt.Sprintf("**Deleted** client %s.", client)), nil
+	}
+}

@@ -1,0 +1,74 @@
+version: 2
+
+project_name: pihole-mcp
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - main: ./cmd/pihole-mcp
+    binary: pihole-mcp
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/lloydmcl/pihole-mcp/internal/server.Version={{.Version}}
+
+archives:
+  - format: tar.gz
+    format_overrides:
+      - goos: windows
+        format: zip
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+dockers:
+  - image_templates:
+      - "ghcr.io/lloydmcl/pihole-mcp:{{ .Version }}-amd64"
+    use: buildx
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--build-arg=VERSION={{.Version}}"
+    dockerfile: Dockerfile
+  - image_templates:
+      - "ghcr.io/lloydmcl/pihole-mcp:{{ .Version }}-arm64"
+    use: buildx
+    goarch: arm64
+    build_flag_templates:
+      - "--platform=linux/arm64"
+      - "--build-arg=VERSION={{.Version}}"
+    dockerfile: Dockerfile
+
+docker_manifests:
+  - name_template: "ghcr.io/lloydmcl/pihole-mcp:{{ .Version }}"
+    image_templates:
+      - "ghcr.io/lloydmcl/pihole-mcp:{{ .Version }}-amd64"
+      - "ghcr.io/lloydmcl/pihole-mcp:{{ .Version }}-arm64"
+  - name_template: "ghcr.io/lloydmcl/pihole-mcp:latest"
+    image_templates:
+      - "ghcr.io/lloydmcl/pihole-mcp:{{ .Version }}-amd64"
+      - "ghcr.io/lloydmcl/pihole-mcp:{{ .Version }}-arm64"
+
+checksum:
+  name_template: "{{ .ProjectName }}_{{ .Version }}_SHA256SUMS"
+  algorithm: sha256
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^ci:"
+      - "^chore:"
+
+release:
+  draft: true
+  prerelease: auto
