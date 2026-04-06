@@ -36,8 +36,10 @@ archives:
 
 dockers_v2:
   - images:
-      - "ghcr.io/lloydmcl/pihole-mcp:{{ .Version }}"
-      - "ghcr.io/lloydmcl/pihole-mcp:latest"
+      - "ghcr.io/lloydmcl/pihole-mcp"
+    tags:
+      - "{{ .Version }}"
+      - latest
     platforms:
       - linux/amd64
       - linux/arm64
