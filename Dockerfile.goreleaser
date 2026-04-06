@@ -1,0 +1,20 @@
+FROM gcr.io/distroless/static-debian13
+
+ARG TARGETPLATFORM
+ARG VERSION=dev
+ARG COMMIT=unknown
+ARG DATE=unknown
+
+LABEL org.opencontainers.image.title="pihole-mcp"
+LABEL org.opencontainers.image.description="MCP server for Pi-hole v6"
+LABEL org.opencontainers.image.source="https://github.com/lloydmcl/pihole-mcp"
+LABEL org.opencontainers.image.licenses="MIT"
+LABEL org.opencontainers.image.version="${VERSION}"
+LABEL org.opencontainers.image.created="${DATE}"
+LABEL org.opencontainers.image.revision="${COMMIT}"
+
+COPY ${TARGETPLATFORM}/pihole-mcp /pihole-mcp
+
+USER nonroot:nonroot
+
+ENTRYPOINT ["/pihole-mcp"]

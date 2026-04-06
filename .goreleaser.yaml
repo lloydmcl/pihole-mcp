@@ -23,38 +23,29 @@ builds:
       - -X github.com/lloydmcl/pihole-mcp/internal/server.Version={{.Version}}
 
 archives:
-  - format: tar.gz
+  - formats:
+      - tar.gz
     format_overrides:
       - goos: windows
-        format: zip
+        formats:
+          - zip
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
 
-dockers:
-  - image_templates:
-      - "ghcr.io/lloydmcl/pihole-mcp:{{ .Version }}-amd64"
-    use: buildx
-    build_flag_templates:
-      - "--platform=linux/amd64"
-      - "--build-arg=VERSION={{.Version}}"
-    dockerfile: Dockerfile
-  - image_templates:
-      - "ghcr.io/lloydmcl/pihole-mcp:{{ .Version }}-arm64"
-    use: buildx
-    goarch: arm64
-    build_flag_templates:
-      - "--platform=linux/arm64"
-      - "--build-arg=VERSION={{.Version}}"
-    dockerfile: Dockerfile
-
-docker_manifests:
-  - name_template: "ghcr.io/lloydmcl/pihole-mcp:{{ .Version }}"
-    image_templates:
-      - "ghcr.io/lloydmcl/pihole-mcp:{{ .Version }}-amd64"
-      - "ghcr.io/lloydmcl/pihole-mcp:{{ .Version }}-arm64"
-  - name_template: "ghcr.io/lloydmcl/pihole-mcp:latest"
-    image_templates:
-      - "ghcr.io/lloydmcl/pihole-mcp:{{ .Version }}-amd64"
-      - "ghcr.io/lloydmcl/pihole-mcp:{{ .Version }}-arm64"
+dockers_v2:
+  - images:
+      - "ghcr.io/lloydmcl/pihole-mcp:{{ .Version }}"
+      - "ghcr.io/lloydmcl/pihole-mcp:latest"
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    build_args:
+      VERSION: "{{ .Version }}"
+      COMMIT: "{{ .FullCommit }}"
+      DATE: "{{ .Date }}"
+    dockerfile: Dockerfile.goreleaser
 
 checksum:
   name_template: "{{ .ProjectName }}_{{ .Version }}_SHA256SUMS"
@@ -62,6 +53,15 @@ checksum:
 
 changelog:
   sort: asc
+  groups:
+    - title: Features
+      regexp: "^.*feat"
+      order: 0
+    - title: Bug Fixes
+      regexp: "^.*fix"
+      order: 1
+    - title: Other
+      order: 999
   filters:
     exclude:
       - "^docs:"
