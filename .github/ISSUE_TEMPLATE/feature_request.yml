@@ -1,0 +1,38 @@
+name: Feature Request
+description: Suggest a new feature or improvement
+title: "[Feature] "
+labels: [enhancement]
+
+body:
+  - type: textarea
+    attributes:
+      label: Problem or use case
+      description: What problem does this solve, or what would it enable?
+      placeholder: I want to be able to ..., because ...
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Proposed solution
+      description: How should this feature work?
+      placeholder: The MCP server should ...
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Example prompts
+      description: Provide 2-3 example prompts that would use this feature.
+      placeholder: |
+        "Show me all blocked domains in the last hour"
+        "Add example.com to the allowlist"
+    validations:
+      required: false
+
+  - type: textarea
+    attributes:
+      label: Alternatives considered
+      description: Have you considered other approaches?
+    validations:
+      required: false

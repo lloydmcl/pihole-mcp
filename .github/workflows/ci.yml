@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: "go.mod"
+
+      - name: Check go mod tidy
+        run: |
+          go mod tidy
+          git diff --exit-code go.mod go.sum
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: "v2.11"
+
+      - name: Test
+        run: go test -race -count=1 ./...
+
+      - name: Build
+        run: go build -o /dev/null ./cmd/pihole-mcp
+
+  build-matrix:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goos: [linux, darwin, windows]
+        goarch: [amd64, arm64]
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: "go.mod"
+
+      - name: Build ${{ matrix.goos }}/${{ matrix.goarch }}
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: "0"
+        run: go build -o /dev/null ./cmd/pihole-mcp
+
+  integration:
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: "go.mod"
+
+      - name: Start Pi-hole
+        run: docker compose -f .github/docker-compose.ci.yml up -d --wait
+
+      - name: Integration tests
+        env:
+          PIHOLE_URL: http://localhost:8081
+          PIHOLE_PASSWORD: test
+        run: go test -tags=integration -race -count=1 ./internal/pihole/
+
+      - name: Pi-hole logs
+        if: failure()
+        run: docker compose -f .github/docker-compose.ci.yml logs

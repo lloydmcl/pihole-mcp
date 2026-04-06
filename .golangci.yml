@@ -1,0 +1,47 @@
+version: "2"
+
+formatters:
+  enable:
+    - goimports
+
+linters:
+  enable:
+    - errcheck
+    - govet
+    - staticcheck
+    - ineffassign
+    - unused
+    - unconvert
+    - gosec
+    - bodyclose
+    - noctx
+    - errorlint
+    - exhaustive
+    - gocritic
+    - revive
+    - misspell
+
+  settings:
+    govet:
+      disable:
+        - fieldalignment
+        - shadow
+    revive:
+      rules:
+        - name: exported
+          arguments:
+            - checkPrivateReceivers
+    misspell:
+      locale: UK
+      extra-words:
+        - typo: "unauthorized"
+          correction: "unauthorized"
+        - typo: "Unauthorized"
+          correction: "Unauthorized"
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+run:
+  timeout: 5m

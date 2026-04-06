@@ -1,0 +1,22 @@
+# Pi-hole instance for CI integration tests.
+# No volumes or blocklist download — starts in seconds, not minutes.
+# Usage: docker compose -f .github/docker-compose.ci.yml up -d --wait
+
+services:
+  pihole:
+    image: pihole/pihole:latest
+    ports:
+      - "8081:80"
+    environment:
+      TZ: "UTC"
+      FTLCONF_webserver_api_password: "test"
+      FTLCONF_webserver_api_max_sessions: "64"
+      FTLCONF_dns_listeningMode: "single"
+      FTLCONF_dns_upstreams: "8.8.8.8"
+      SKIPGRAVITYONBOOT: "true"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsSL -o /dev/null http://localhost/admin/ || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 30s
