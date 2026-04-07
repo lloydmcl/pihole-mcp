@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://raw.githubusercontent.com/pi-hole/graphics/refs/heads/master/Vortex/Vortex.svg" width="120" alt="Pi-hole">
+<img src="assets/logo.svg" width="120" alt="pihole-mcp">
 
 # pihole-mcp
 
@@ -363,7 +363,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for full development guidelines.
 
 ---
 
-Pi-hole is a registered trademark of Pi-hole LLC. This project is not affiliated with or endorsed by Pi-hole.
+[Pi-hole](https://pi-hole.net/) is a registered trademark of Pi-hole LLC. This project is independently maintained and is not affiliated with, endorsed by, or sponsored by Pi-hole LLC.
 
 ## Licence
 
