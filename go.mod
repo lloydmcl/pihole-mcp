@@ -1,4 +1,4 @@
-module github.com/lloydmcl/pihole-mcp
+module github.com/hexamatic/pihole-mcp
 
 go 1.26
 

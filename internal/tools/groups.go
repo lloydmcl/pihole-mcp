@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/lloydmcl/pihole-mcp/internal/pihole"
+	"github.com/hexamatic/pihole-mcp/internal/pihole"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
@@ -58,7 +58,7 @@ func groupsListHandler(c *pihole.Client) server.ToolHandlerFunc {
 
 		var result pihole.GroupsResponse
 		if err := c.Get(ctx, path, &result); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to list groups: %v", err)), nil
+			return toolError("list groups", err), nil
 		}
 
 		if len(result.Groups) == 0 {
@@ -97,7 +97,7 @@ func groupsAddHandler(c *pihole.Client) server.ToolHandlerFunc {
 
 		var result pihole.GroupsResponse
 		if err := c.Post(ctx, "/groups", body, &result); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to add group: %v", err)), nil
+			return toolError("add group", err), nil
 		}
 
 		return mcp.NewToolResultText(fmt.Sprintf("**Created** group %s.", name)), nil
@@ -121,7 +121,7 @@ func groupsUpdateHandler(c *pihole.Client) server.ToolHandlerFunc {
 
 		var result pihole.GroupsResponse
 		if err := c.Put(ctx, "/groups/"+name, body, &result); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to update group: %v", err)), nil
+			return toolError("update group", err), nil
 		}
 
 		return mcp.NewToolResultText(fmt.Sprintf("**Updated** group %s.", name)), nil
@@ -133,7 +133,7 @@ func groupsDeleteHandler(c *pihole.Client) server.ToolHandlerFunc {
 		name, _ := req.RequireString("name")
 
 		if err := c.Delete(ctx, "/groups/"+name); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to delete group: %v", err)), nil
+			return toolError("delete group", err), nil
 		}
 
 		return mcp.NewToolResultText(fmt.Sprintf("**Deleted** group %s.", name)), nil
@@ -148,7 +148,7 @@ func groupsBatchDeleteHandler(c *pihole.Client) server.ToolHandlerFunc {
 		}
 
 		if err := c.Post(ctx, "/groups:batchDelete", rawJSON(items), nil); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Batch delete failed: %v", err)), nil
+			return toolError("batch delete groups", err), nil
 		}
 
 		return mcp.NewToolResultText("**Batch delete completed.**"), nil

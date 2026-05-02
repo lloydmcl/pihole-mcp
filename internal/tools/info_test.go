@@ -84,6 +84,127 @@ func TestInfoSystem_Minimal(t *testing.T) {
 	}
 }
 
+func TestInfoFTL_Normal(t *testing.T) {
+	c := newTestClient(t, piholeHandler(map[string]any{
+		"/info/ftl": map[string]any{
+			"ftl": map[string]any{
+				"pid":               1234,
+				"uptime":            12345.6,
+				"privacy_level":     0,
+				"query_frequency":   2.5,
+				"clients":           map[string]any{"total": 50, "active": 42},
+				"%mem":              0.13,
+				"%cpu":              0.14,
+				"allow_destructive": true,
+				"database": map[string]any{
+					"gravity": 92277,
+					"groups":  1,
+					"lists":   3,
+					"clients": 0,
+				},
+				"dnsmasq": map[string]any{"dns_cache_inserted": 0},
+			},
+		},
+	}))
+
+	text := callTool(t, infoFTLHandler, c, nil)
+	if !strings.Contains(text, "1,234") {
+		t.Errorf("expected formatted PID '1,234', got: %s", text)
+	}
+	if !strings.Contains(text, "Privacy level") {
+		t.Errorf("expected 'Privacy level' label, got: %s", text)
+	}
+	if !strings.Contains(text, "92,277") {
+		t.Errorf("expected formatted gravity count '92,277', got: %s", text)
+	}
+	if !strings.Contains(text, "42 of 50") {
+		t.Errorf("expected active/total client format '42 of 50', got: %s", text)
+	}
+}
+
+func TestInfoFTL_Minimal(t *testing.T) {
+	c := newTestClient(t, piholeHandler(map[string]any{
+		"/info/ftl": map[string]any{
+			"ftl": map[string]any{
+				"pid":           1234,
+				"privacy_level": 2,
+				"clients":       map[string]any{"total": 50, "active": 42},
+				"database":      map[string]any{"gravity": 92277},
+			},
+		},
+	}))
+
+	text := callTool(t, infoFTLHandler, c, map[string]any{"detail": "minimal"})
+	if strings.Count(text, "\n") > 1 {
+		t.Errorf("minimal should be single-line, got: %s", text)
+	}
+	if !strings.Contains(text, "Privacy: 2") {
+		t.Errorf("minimal should show privacy level, got: %s", text)
+	}
+}
+
+func TestInfoMetrics_Normal(t *testing.T) {
+	c := newTestClient(t, piholeHandler(map[string]any{
+		"/info/metrics": map[string]any{
+			"metrics": map[string]any{
+				"dns_cache_size": 10000,
+				"reply_NODATA":   512,
+				"dhcp": map[string]any{
+					"leases_allocated": 15,
+					"leases_pruned":    3,
+				},
+			},
+		},
+	}))
+
+	text := callTool(t, infoMetricsHandler, c, nil)
+	if !strings.Contains(text, "dns_cache_size") {
+		t.Errorf("expected 'dns_cache_size' key, got: %s", text)
+	}
+	if !strings.Contains(text, "reply_NODATA") {
+		t.Errorf("expected 'reply_NODATA' key, got: %s", text)
+	}
+	if !strings.Contains(text, "dhcp") {
+		t.Errorf("expected 'dhcp' key, got: %s", text)
+	}
+	if !strings.Contains(text, "sub-keys") {
+		t.Errorf("expected 'sub-keys' for nested map, got: %s", text)
+	}
+}
+
+func TestInfoSensors_Normal(t *testing.T) {
+	c := newTestClient(t, piholeHandler(map[string]any{
+		"/info/sensors": map[string]any{
+			"sensors": map[string]any{
+				"list": []any{
+					map[string]any{"name": "cpu_thermal", "value": 52.3, "unit": "\u00b0C", "path": "/sys/class/thermal/thermal_zone0/temp"},
+				},
+			},
+		},
+	}))
+
+	text := callTool(t, infoSensorsHandler, c, nil)
+	if !strings.Contains(text, "cpu_thermal") {
+		t.Errorf("expected sensor name 'cpu_thermal', got: %s", text)
+	}
+	if !strings.Contains(text, "52.3") {
+		t.Errorf("expected sensor value '52.3', got: %s", text)
+	}
+}
+
+func TestInfoSensors_Empty(t *testing.T) {
+	c := newTestClient(t, piholeHandler(map[string]any{
+		"/info/sensors": map[string]any{
+			"sensors": map[string]any{"list": []any{}},
+		},
+	}))
+
+	text := callTool(t, infoSensorsHandler, c, nil)
+	if !strings.Contains(text, "No sensor data available") {
+		t.Errorf("expected empty sensors message, got: %s", text)
+	}
+}
+
 func TestInfoDatabase_EmptyFields(t *testing.T) {
 	c := newTestClient(t, piholeHandler(map[string]any{
 		"/info/database": map[string]any{

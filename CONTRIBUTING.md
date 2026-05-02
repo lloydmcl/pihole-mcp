@@ -13,7 +13,7 @@ Thanks for your interest in contributing. This document covers how to get starte
 
 ```bash
 # Clone the repository
-git clone https://github.com/lloydmcl/pihole-mcp.git
+git clone https://github.com/hexamatic/pihole-mcp.git
 cd pihole-mcp
 
 # Install tools and dependencies (one command)

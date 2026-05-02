@@ -60,6 +60,10 @@ call_tool "pihole_stats_query_types"
 call_tool "pihole_stats_recent_blocked" '{"count":3}'
 call_tool "pihole_stats_database"
 call_tool "pihole_stats_database" '{"from":1712300000,"until":1712400000}' "stats_database (with range)"
+call_tool "pihole_stats_database_top_domains" '{"from":1712300000,"until":1712400000,"count":3}'
+call_tool "pihole_stats_database_top_clients" '{"from":1712300000,"until":1712400000,"count":3}'
+call_tool "pihole_stats_database_upstreams" '{"from":1712300000,"until":1712400000}'
+call_tool "pihole_stats_database_query_types" '{"from":1712300000,"until":1712400000}'
 
 echo ""
 echo "--- System Info ---"
@@ -69,6 +73,9 @@ call_tool "pihole_info_version"
 call_tool "pihole_info_database"
 call_tool "pihole_info_messages"
 call_tool "pihole_info_client"
+call_tool "pihole_info_ftl"
+call_tool "pihole_info_metrics"
+call_tool "pihole_info_sensors"
 
 echo ""
 echo "--- Query Log ---"
@@ -117,6 +124,9 @@ echo ""
 echo "--- Configuration ---"
 call_tool "pihole_config_get" '{"section":"dns"}' "config_get (dns)"
 call_tool "pihole_config_get" '{"detail":"minimal"}' "config_get (minimal)"
+call_tool "pihole_config_get_value" '{"element":"dns.upstreams"}' "config_get_value (dns.upstreams)"
+call_tool "pihole_config_add_value" '{"element":"dns.upstreams","value":"127.0.0.99#53","restart":false}' "config_add_value (round-trip add)"
+call_tool "pihole_config_remove_value" '{"element":"dns.upstreams","value":"127.0.0.99#53","restart":false}' "config_remove_value (round-trip remove)"
 
 echo ""
 echo "--- Network ---"
@@ -135,6 +145,10 @@ echo "--- Logs ---"
 call_tool "pihole_logs_dns"
 call_tool "pihole_logs_ftl"
 call_tool "pihole_logs_webserver"
+
+echo ""
+echo "--- Sessions ---"
+call_tool "pihole_auth_sessions"
 
 echo ""
 echo "--- Teleporter ---"

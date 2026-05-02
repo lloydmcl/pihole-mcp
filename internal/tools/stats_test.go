@@ -96,3 +96,98 @@ func TestStatsTopDomains_CSV(t *testing.T) {
 		t.Errorf("CSV should contain domain, got: %s", text)
 	}
 }
+
+func TestStatsDatabaseTopDomains_Normal(t *testing.T) {
+	c := newTestClient(t, piholeHandler(map[string]any{
+		"/stats/database/top_domains": map[string]any{
+			"domains":         []any{map[string]any{"domain": "google.com", "count": 500}, map[string]any{"domain": "facebook.com", "count": 300}},
+			"total_queries":   5000,
+			"blocked_queries": 1000,
+		},
+	}))
+
+	text := callTool(t, statsDatabaseTopDomainsHandler, c, nil)
+	if !strings.Contains(text, "google.com") {
+		t.Errorf("expected domain name, got: %s", text)
+	}
+	if !strings.Contains(text, "500") {
+		t.Errorf("expected domain count, got: %s", text)
+	}
+	if !strings.Contains(text, "facebook.com") {
+		t.Errorf("expected second domain, got: %s", text)
+	}
+	if !strings.Contains(text, "300") {
+		t.Errorf("expected second count, got: %s", text)
+	}
+}
+
+func TestStatsDatabaseTopClients_Normal(t *testing.T) {
+	c := newTestClient(t, piholeHandler(map[string]any{
+		"/stats/database/top_clients": map[string]any{
+			"clients":         []any{map[string]any{"ip": "192.168.1.10", "name": "desktop", "count": 1200}, map[string]any{"ip": "192.168.1.20", "name": "", "count": 800}},
+			"total_queries":   5000,
+			"blocked_queries": 1000,
+		},
+	}))
+
+	text := callTool(t, statsDatabaseTopClientsHandler, c, nil)
+	if !strings.Contains(text, "192.168.1.10") {
+		t.Errorf("expected client IP, got: %s", text)
+	}
+	if !strings.Contains(text, "desktop") {
+		t.Errorf("expected client name, got: %s", text)
+	}
+	if !strings.Contains(text, "1,200") {
+		t.Errorf("expected formatted count, got: %s", text)
+	}
+	if !strings.Contains(text, "192.168.1.20") {
+		t.Errorf("expected second client IP, got: %s", text)
+	}
+}
+
+func TestStatsDatabaseUpstreams_Normal(t *testing.T) {
+	dns1 := "8.8.8.8"
+	name1 := "google-dns"
+	c := newTestClient(t, piholeHandler(map[string]any{
+		"/stats/database/upstreams": map[string]any{
+			"upstreams": []any{
+				map[string]any{"ip": &dns1, "name": &name1, "port": 53, "count": 3000, "statistics": map[string]any{"response": 12.5, "variance": 2.1}},
+			},
+			"forwarded_queries": 3000,
+			"total_queries":     5000,
+		},
+	}))
+
+	text := callTool(t, statsDatabaseUpstreamsHandler, c, nil)
+	if !strings.Contains(text, "google-dns") {
+		t.Errorf("expected upstream name, got: %s", text)
+	}
+	if !strings.Contains(text, "3,000") {
+		t.Errorf("expected query count, got: %s", text)
+	}
+	if !strings.Contains(text, "5,000") {
+		t.Errorf("expected total queries, got: %s", text)
+	}
+}
+
+func TestStatsDatabaseQueryTypes_Normal(t *testing.T) {
+	c := newTestClient(t, piholeHandler(map[string]any{
+		"/stats/database/query_types": map[string]any{
+			"types": map[string]any{"A": 4000, "AAAA": 800, "MX": 50},
+		},
+	}))
+
+	text := callTool(t, statsDatabaseQueryTypesHandler, c, nil)
+	if !strings.Contains(text, "A:") {
+		t.Errorf("expected query type A, got: %s", text)
+	}
+	if !strings.Contains(text, "AAAA") {
+		t.Errorf("expected query type AAAA, got: %s", text)
+	}
+	if !strings.Contains(text, "4,000") {
+		t.Errorf("expected A count, got: %s", text)
+	}
+	if !strings.Contains(text, "MX") {
+		t.Errorf("expected query type MX, got: %s", text)
+	}
+}

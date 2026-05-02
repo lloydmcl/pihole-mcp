@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/lloydmcl/pihole-mcp/internal/format"
-	"github.com/lloydmcl/pihole-mcp/internal/pihole"
+	"github.com/hexamatic/pihole-mcp/internal/format"
+	"github.com/hexamatic/pihole-mcp/internal/pihole"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
@@ -45,6 +45,12 @@ func RegisterClients(s *server.MCPServer, c *pihole.Client) {
 		mcp.WithDestructiveHintAnnotation(true),
 		mcp.WithIdempotentHintAnnotation(true),
 	), clientsDeleteHandler(c))
+
+	addTool(s, mcp.NewTool("pihole_clients_batch_delete",
+		mcp.WithDescription("Remove multiple configured clients at once. Provide a JSON array of client identifiers."),
+		mcp.WithString("items", mcp.Required(), mcp.Description("JSON array of client identifiers, e.g. [\"192.168.1.10\",\"192.168.1.20\"]")),
+		mcp.WithDestructiveHintAnnotation(true),
+	), clientsBatchDeleteHandler(c))
 }
 
 func clientsListHandler(c *pihole.Client) server.ToolHandlerFunc {
@@ -56,7 +62,7 @@ func clientsListHandler(c *pihole.Client) server.ToolHandlerFunc {
 
 		var result pihole.ClientsResponse
 		if err := c.Get(ctx, path, &result); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to list clients: %v", err)), nil
+			return toolError("list clients", err), nil
 		}
 
 		if len(result.Clients) == 0 {
@@ -93,7 +99,7 @@ func clientsSuggestionsHandler(c *pihole.Client) server.ToolHandlerFunc {
 	return func(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		var result pihole.ClientSuggestionsResponse
 		if err := c.Get(ctx, "/clients/_suggestions", &result); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to get suggestions: %v", err)), nil
+			return toolError("get client suggestions", err), nil
 		}
 
 		if len(result.Clients) == 0 {
@@ -134,7 +140,7 @@ func clientsAddHandler(c *pihole.Client) server.ToolHandlerFunc {
 
 		var result pihole.ClientsResponse
 		if err := c.Post(ctx, "/clients", body, &result); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to add client: %v", err)), nil
+			return toolError("add client", err), nil
 		}
 
 		return mcp.NewToolResultText(fmt.Sprintf("**Added** client %s.", client)), nil
@@ -152,7 +158,7 @@ func clientsUpdateHandler(c *pihole.Client) server.ToolHandlerFunc {
 
 		var result pihole.ClientsResponse
 		if err := c.Put(ctx, "/clients/"+client, body, &result); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to update client: %v", err)), nil
+			return toolError("update client", err), nil
 		}
 
 		return mcp.NewToolResultText(fmt.Sprintf("**Updated** client %s.", client)), nil
@@ -164,9 +170,24 @@ func clientsDeleteHandler(c *pihole.Client) server.ToolHandlerFunc {
 		client, _ := req.RequireString("client")
 
 		if err := c.Delete(ctx, "/clients/"+client); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to delete client: %v", err)), nil
+			return toolError("delete client", err), nil
 		}
 
 		return mcp.NewToolResultText(fmt.Sprintf("**Deleted** client %s.", client)), nil
+	}
+}
+
+func clientsBatchDeleteHandler(c *pihole.Client) server.ToolHandlerFunc {
+	return func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		items, err := req.RequireString("items")
+		if err != nil {
+			return mcp.NewToolResultError("Parameter 'items' is required (JSON array)"), nil
+		}
+
+		if err := c.Post(ctx, "/clients:batchDelete", rawJSON(items), nil); err != nil {
+			return toolError("batch delete clients", err), nil
+		}
+
+		return mcp.NewToolResultText("**Batch delete completed.**"), nil
 	}
 }

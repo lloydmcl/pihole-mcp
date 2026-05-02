@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/lloydmcl/pihole-mcp/internal/format"
-	"github.com/lloydmcl/pihole-mcp/internal/pihole"
+	"github.com/hexamatic/pihole-mcp/internal/format"
+	"github.com/hexamatic/pihole-mcp/internal/pihole"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
@@ -30,7 +30,7 @@ func dhcpLeasesHandler(c *pihole.Client) server.ToolHandlerFunc {
 	return func(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		var result pihole.DHCPLeasesResponse
 		if err := c.Get(ctx, "/dhcp/leases", &result); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to get leases: %v", err)), nil
+			return toolError("get DHCP leases", err), nil
 		}
 
 		if len(result.Leases) == 0 {
@@ -59,7 +59,7 @@ func dhcpDeleteLeaseHandler(c *pihole.Client) server.ToolHandlerFunc {
 		}
 
 		if err := c.Delete(ctx, "/dhcp/leases/"+ip); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to delete lease: %v", err)), nil
+			return toolError("delete DHCP lease", err), nil
 		}
 
 		return mcp.NewToolResultText(fmt.Sprintf("**Deleted** lease for %s.", ip)), nil

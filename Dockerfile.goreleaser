@@ -7,7 +7,7 @@ ARG DATE=unknown
 
 LABEL org.opencontainers.image.title="pihole-mcp"
 LABEL org.opencontainers.image.description="MCP server for Pi-hole v6"
-LABEL org.opencontainers.image.source="https://github.com/lloydmcl/pihole-mcp"
+LABEL org.opencontainers.image.source="https://github.com/hexamatic/pihole-mcp"
 LABEL org.opencontainers.image.licenses="MIT"
 LABEL org.opencontainers.image.version="${VERSION}"
 LABEL org.opencontainers.image.created="${DATE}"

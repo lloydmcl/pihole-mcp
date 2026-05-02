@@ -1,5 +1,5 @@
 blank_issues_enabled: false
 contact_links:
   - name: Questions and Support
-    url: https://github.com/lloydmcl/pihole-mcp/discussions
+    url: https://github.com/hexamatic/pihole-mcp/discussions
     about: Ask questions or get help with configuration

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/lloydmcl/pihole-mcp/internal/format"
-	"github.com/lloydmcl/pihole-mcp/internal/pihole"
+	"github.com/hexamatic/pihole-mcp/internal/format"
+	"github.com/hexamatic/pihole-mcp/internal/pihole"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
@@ -41,7 +41,7 @@ func networkDevicesHandler(c *pihole.Client) server.ToolHandlerFunc {
 		path := fmt.Sprintf("/network/devices?max_devices=%d&max_addresses=%d", maxDev, maxAddr)
 		var result pihole.NetworkDevicesResponse
 		if err := c.Get(ctx, path, &result); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to get devices: %v", err)), nil
+			return toolError("get network devices", err), nil
 		}
 
 		if len(result.Devices) == 0 {
@@ -93,7 +93,7 @@ func networkGatewayHandler(c *pihole.Client) server.ToolHandlerFunc {
 	return func(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		var result pihole.GatewayResponse
 		if err := c.Get(ctx, "/network/gateway", &result); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to get gateway: %v", err)), nil
+			return toolError("get gateway", err), nil
 		}
 
 		if len(result.Gateway) == 0 {

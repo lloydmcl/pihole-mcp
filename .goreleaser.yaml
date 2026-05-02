@@ -20,7 +20,7 @@ builds:
       - arm64
     ldflags:
       - -s -w
-      - -X github.com/lloydmcl/pihole-mcp/internal/server.Version={{.Version}}
+      - -X github.com/hexamatic/pihole-mcp/internal/server.Version={{.Version}}
 
 archives:
   - formats:
@@ -36,7 +36,7 @@ archives:
 
 dockers_v2:
   - images:
-      - "ghcr.io/lloydmcl/pihole-mcp"
+      - "ghcr.io/hexamatic/pihole-mcp"
     tags:
       - "{{ .Version }}"
       - latest

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/lloydmcl/pihole-mcp/internal/format"
-	"github.com/lloydmcl/pihole-mcp/internal/pihole"
+	"github.com/hexamatic/pihole-mcp/internal/format"
+	"github.com/hexamatic/pihole-mcp/internal/pihole"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
@@ -52,10 +52,7 @@ func queriesSearchHandler(c *pihole.Client) server.ToolHandlerFunc {
 		if v := req.GetFloat("until", 0); v > 0 {
 			params["until"] = fmt.Sprintf("%.0f", v)
 		}
-		length := int(req.GetFloat("length", 25))
-		if length > 100 {
-			length = 100
-		}
+		length := getCountCapped(req, "length", 25, 100)
 		params["length"] = fmt.Sprintf("%d", length)
 		if v := req.GetFloat("cursor", 0); v > 0 {
 			params["cursor"] = fmt.Sprintf("%.0f", v)
@@ -64,7 +61,7 @@ func queriesSearchHandler(c *pihole.Client) server.ToolHandlerFunc {
 		path := "/queries" + format.QueryParams(params)
 		var result pihole.QueriesResponse
 		if err := c.Get(ctx, path, &result); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to search queries: %v", err)), nil
+			return toolError("search queries", err), nil
 		}
 
 		detail := getDetail(req)
@@ -126,7 +123,7 @@ func queriesSuggestionsHandler(c *pihole.Client) server.ToolHandlerFunc {
 	return func(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		var result pihole.QuerySuggestions
 		if err := c.Get(ctx, "/queries/suggestions", &result); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to get suggestions: %v", err)), nil
+			return toolError("get query suggestions", err), nil
 		}
 
 		s := result.Suggestions

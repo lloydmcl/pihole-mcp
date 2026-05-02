@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/lloydmcl/pihole-mcp/internal/format"
-	"github.com/lloydmcl/pihole-mcp/internal/pihole"
+	"github.com/hexamatic/pihole-mcp/internal/format"
+	"github.com/hexamatic/pihole-mcp/internal/pihole"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
@@ -20,6 +20,7 @@ func RegisterDomains(s *server.MCPServer, c *pihole.Client) {
 		detailParam,
 		formatParam,
 		mcp.WithReadOnlyHintAnnotation(true),
+		mcp.WithOutputSchema[DomainsListOutput](),
 	), domainsListHandler(c))
 
 	addTool(s, mcp.NewTool("pihole_domains_add",
@@ -70,17 +71,33 @@ func domainsListHandler(c *pihole.Client) server.ToolHandlerFunc {
 
 		var result pihole.DomainsResponse
 		if err := c.Get(ctx, path, &result); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to list domains: %v", err)), nil
+			return toolError("list domains", err), nil
 		}
 
 		if len(result.Domains) == 0 {
 			return mcp.NewToolResultText("No domains found."), nil
 		}
 
+		// Build structured output.
+		domains := make([]DomainOutput, len(result.Domains))
+		for i, d := range result.Domains {
+			domains[i] = DomainOutput{
+				Domain:  d.Domain,
+				Type:    d.Type,
+				Kind:    d.Kind,
+				Enabled: d.Enabled,
+				Comment: d.Comment,
+			}
+		}
+		output := DomainsListOutput{
+			Domains: domains,
+			Count:   len(result.Domains),
+		}
+
 		detail := getDetail(req)
 
 		if detail == "minimal" {
-			return mcp.NewToolResultText(fmt.Sprintf("%d domains.", len(result.Domains))), nil
+			return mcp.NewToolResultStructured(output, fmt.Sprintf("%d domains.", len(result.Domains))), nil
 		}
 
 		if wantCSV(req) {
@@ -89,7 +106,7 @@ func domainsListHandler(c *pihole.Client) server.ToolHandlerFunc {
 			for _, d := range result.Domains {
 				rows = append(rows, []string{d.Domain, d.Type, d.Kind, format.Bool(d.Enabled), d.Comment})
 			}
-			return mcp.NewToolResultText(format.CSV(headers, rows)), nil
+			return mcp.NewToolResultStructured(output, format.CSV(headers, rows)), nil
 		}
 
 		var b strings.Builder
@@ -109,7 +126,7 @@ func domainsListHandler(c *pihole.Client) server.ToolHandlerFunc {
 			b.WriteString("\n")
 		}
 
-		return mcp.NewToolResultText(b.String()), nil
+		return mcp.NewToolResultStructured(output, b.String()), nil
 	}
 }
 
@@ -130,7 +147,7 @@ func domainsAddHandler(c *pihole.Client) server.ToolHandlerFunc {
 		path := fmt.Sprintf("/domains/%s/%s", t, k)
 		var result pihole.DomainsResponse
 		if err := c.Post(ctx, path, body, &result); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to add domain: %v", err)), nil
+			return toolError("add domain", err), nil
 		}
 
 		var b strings.Builder
@@ -158,7 +175,7 @@ func domainsUpdateHandler(c *pihole.Client) server.ToolHandlerFunc {
 		path := fmt.Sprintf("/domains/%s/%s/%s", t, k, domain)
 		var result pihole.DomainsResponse
 		if err := c.Put(ctx, path, body, &result); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to update domain: %v", err)), nil
+			return toolError("update domain", err), nil
 		}
 
 		return mcp.NewToolResultText(fmt.Sprintf("**Updated** %s on %s/%s list.", domain, t, k)), nil
@@ -173,7 +190,7 @@ func domainsDeleteHandler(c *pihole.Client) server.ToolHandlerFunc {
 
 		path := fmt.Sprintf("/domains/%s/%s/%s", t, k, domain)
 		if err := c.Delete(ctx, path); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to delete domain: %v", err)), nil
+			return toolError("delete domain", err), nil
 		}
 
 		return mcp.NewToolResultText(fmt.Sprintf("**Deleted** %s from %s/%s list.", domain, t, k)), nil
@@ -188,22 +205,10 @@ func domainsBatchDeleteHandler(c *pihole.Client) server.ToolHandlerFunc {
 		}
 
 		if err := c.Post(ctx, "/domains:batchDelete", rawJSON(items), nil); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Batch delete failed: %v", err)), nil
+			return toolError("batch delete domains", err), nil
 		}
 
 		return mcp.NewToolResultText("**Batch delete completed.**"), nil
-	}
-}
-
-func writeProcessedResult(b *strings.Builder, p *pihole.ProcessedResult) {
-	if p == nil {
-		return
-	}
-	for _, s := range p.Success {
-		fmt.Fprintf(b, "- Added: %s\n", s.Item)
-	}
-	for _, e := range p.Errors {
-		fmt.Fprintf(b, "- Failed: %s (%s)\n", e.Item, e.Error)
 	}
 }
 

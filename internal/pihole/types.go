@@ -538,16 +538,30 @@ type FTLInfo struct {
 
 // FTLDetails contains FTL engine information.
 type FTLDetails struct {
-	PID          int   `json:"pid"`
-	Database     FTLdb `json:"database"`
-	PrivacyLevel int   `json:"privacy_level"`
-	Clients      int   `json:"clients"`
-	DomainCount  int   `json:"domains_being_blocked"`
+	PID              int            `json:"pid"`
+	Uptime           float64        `json:"uptime"`
+	Database         FTLdb          `json:"database"`
+	PrivacyLevel     int            `json:"privacy_level"`
+	QueryFrequency   float64        `json:"query_frequency"`
+	Clients          FTLClients     `json:"clients"`
+	MemPercent       float64        `json:"%mem"`
+	CPUPercent       float64        `json:"%cpu"`
+	AllowDestructive bool           `json:"allow_destructive"`
+	Dnsmasq          map[string]any `json:"dnsmasq"`
 }
 
-// FTLdb contains FTL database info.
+// FTLClients holds FTL client population counts.
+type FTLClients struct {
+	Total  int `json:"total"`
+	Active int `json:"active"`
+}
+
+// FTLdb contains FTL database content counts.
 type FTLdb struct {
-	Queries int `json:"queries"`
+	Gravity int `json:"gravity"`
+	Groups  int `json:"groups"`
+	Lists   int `json:"lists"`
+	Clients int `json:"clients"`
 }
 
 // DatabaseInfo is the response from GET /api/info/database.
@@ -676,4 +690,25 @@ type ActionResponse struct {
 type TeleporterImportResponse struct {
 	Processed []string `json:"processed"`
 	Took      float64  `json:"took"`
+}
+
+// MetricsInfo is the response from GET /api/info/metrics.
+type MetricsInfo struct {
+	Metrics map[string]any `json:"metrics"`
+	Took    float64        `json:"took"`
+}
+
+// SessionsResponse is the response from GET /api/auth/sessions.
+type SessionsResponse struct {
+	Sessions []Session `json:"sessions"`
+	Took     float64   `json:"took"`
+}
+
+// Session represents an active API session.
+type Session struct {
+	ID             int     `json:"id"`
+	RemoteAddr     string  `json:"remote_addr"`
+	UserAgent      string  `json:"user_agent"`
+	ValidUntil     float64 `json:"valid_until"`
+	CurrentSession bool    `json:"this"`
 }

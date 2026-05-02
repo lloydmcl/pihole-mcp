@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lloydmcl/pihole-mcp/internal/format"
-	"github.com/lloydmcl/pihole-mcp/internal/pihole"
+	"github.com/hexamatic/pihole-mcp/internal/format"
+	"github.com/hexamatic/pihole-mcp/internal/pihole"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
@@ -35,7 +35,7 @@ func teleporterExportHandler(c *pihole.Client) server.ToolHandlerFunc {
 	return func(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		resp, err := c.DoRaw(ctx, "GET", "/teleporter", nil)
 		if err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to export: %v", err)), nil
+			return toolError("export backup", err), nil
 		}
 		defer func() { _ = resp.Body.Close() }()
 
@@ -86,7 +86,7 @@ func teleporterImportHandler(c *pihole.Client) server.ToolHandlerFunc {
 
 		var result pihole.TeleporterImportResponse
 		if err := c.PostMultipart(ctx, "/teleporter", filePath, importOptions, &result); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to import: %v", err)), nil
+			return toolError("import backup", err), nil
 		}
 
 		var b strings.Builder
