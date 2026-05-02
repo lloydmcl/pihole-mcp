@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/lloydmcl/pihole-mcp/internal/format"
-	"github.com/lloydmcl/pihole-mcp/internal/pihole"
+	"github.com/hexamatic/pihole-mcp/internal/format"
+	"github.com/hexamatic/pihole-mcp/internal/pihole"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
@@ -39,7 +39,7 @@ func searchDomainsHandler(c *pihole.Client) server.ToolHandlerFunc {
 		path := "/search/" + domain + format.QueryParams(params)
 		var result pihole.SearchResponse
 		if err := c.Get(ctx, path, &result); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to search: %v", err)), nil
+			return toolError("search domains", err), nil
 		}
 
 		s := result.Search

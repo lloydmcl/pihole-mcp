@@ -1,6 +1,8 @@
 set dotenv-load
 
-export PATH := `mise bin-paths` + ":" + env("PATH")
+# `mise bin-paths` emits one path per line, so we collapse the newlines into
+# the colon separator PATH expects before prepending to the inherited PATH.
+export PATH := `mise bin-paths | tr '\n' ':'` + env("PATH")
 
 # Default recipe — show help
 [private]
@@ -28,7 +30,7 @@ deps:
 # Build the pihole-mcp binary with version injection
 [group('build')]
 build:
-    go build -ldflags="-s -w -X github.com/lloydmcl/pihole-mcp/internal/server.Version=$(git describe --tags --always --dirty 2>/dev/null || echo dev)" -o bin/pihole-mcp ./cmd/pihole-mcp
+    go build -ldflags="-s -w -X github.com/hexamatic/pihole-mcp/internal/server.Version=$(git describe --tags --always --dirty 2>/dev/null || echo dev)" -o bin/pihole-mcp ./cmd/pihole-mcp
 
 # Install to $GOPATH/bin
 [group('build')]
@@ -100,7 +102,7 @@ dev-logs:
 integration:
     PIHOLE_URL=http://localhost:8081 PIHOLE_PASSWORD=test go test -tags=integration -race -count=1 ./...
 
-# Run E2E test of all 55 tools against local Pi-hole
+# Run E2E test of all 68 tools against local Pi-hole
 [group('dev')]
 e2e: build
     PIHOLE_URL=http://localhost:8081 PIHOLE_PASSWORD=test scripts/e2e-test.sh ./bin/pihole-mcp

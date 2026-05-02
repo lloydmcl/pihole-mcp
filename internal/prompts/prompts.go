@@ -41,6 +41,21 @@ func RegisterAll(s *server.MCPServer) {
 	s.AddPrompt(mcp.NewPrompt("daily_report",
 		mcp.WithPromptDescription("Generate a comprehensive daily Pi-hole summary covering queries, blocking, clients, upstreams, and system health."),
 	), dailyReportHandler)
+
+	s.AddPrompt(mcp.NewPrompt("security_audit",
+		mcp.WithPromptDescription("Review active API sessions, authentication configuration, and diagnostic messages to detect potential unauthorised access."),
+	), securityAuditHandler)
+
+	s.AddPrompt(mcp.NewPrompt("weekly_trends",
+		mcp.WithPromptDescription("Compare this week's DNS statistics to last week using long-term database queries to identify trends."),
+		mcp.WithArgument("weeks_back",
+			mcp.ArgumentDescription("Number of weeks to compare against (default 1)"),
+		),
+	), weeklyTrendsHandler)
+
+	s.AddPrompt(mcp.NewPrompt("upstream_health",
+		mcp.WithPromptDescription("Deep analysis of DNS resolver performance, cache efficiency, and upstream response times with historical comparison."),
+	), upstreamHealthHandler)
 }
 
 func diagnoseSlowDNSHandler(_ context.Context, _ mcp.GetPromptRequest) (*mcp.GetPromptResult, error) {
@@ -170,6 +185,82 @@ func dailyReportHandler(_ context.Context, _ mcp.GetPromptRequest) (*mcp.GetProm
 					"- Upstream DNS health and response times\n"+
 					"- System resource usage and any concerns\n"+
 					"- Recommendations for action if any issues are found.",
+			)),
+		},
+	}, nil
+}
+
+func securityAuditHandler(_ context.Context, _ mcp.GetPromptRequest) (*mcp.GetPromptResult, error) {
+	return &mcp.GetPromptResult{
+		Description: "Security audit",
+		Messages: []mcp.PromptMessage{
+			mcp.NewPromptMessage(mcp.RoleUser, mcp.NewTextContent(
+				"Perform a security audit on this Pi-hole instance.\n\n"+
+					"Follow these steps:\n"+
+					"1. Use pihole_auth_sessions to list all active API sessions\n"+
+					"2. Use pihole_config_get_value with element='webserver.api' to check authentication settings\n"+
+					"3. Use pihole_info_messages to look for security-related warnings or failed authentication attempts\n"+
+					"4. Use pihole_info_ftl to check the FTL privacy level setting\n\n"+
+					"Based on the data:\n"+
+					"- Identify any unexpected sessions (unknown IPs, unusual user agents)\n"+
+					"- Verify authentication is properly configured\n"+
+					"- Check if the privacy level is appropriate\n"+
+					"- Flag any security-related diagnostic messages\n"+
+					"- Recommend actions to improve security posture",
+			)),
+		},
+	}, nil
+}
+
+func weeklyTrendsHandler(_ context.Context, req mcp.GetPromptRequest) (*mcp.GetPromptResult, error) {
+	weeksBack := req.Params.Arguments["weeks_back"]
+	if weeksBack == "" {
+		weeksBack = "1"
+	}
+
+	return &mcp.GetPromptResult{
+		Description: "Weekly DNS trend analysis",
+		Messages: []mcp.PromptMessage{
+			mcp.NewPromptMessage(mcp.RoleUser, mcp.NewTextContent(
+				fmt.Sprintf("Analyse DNS trends by comparing this week to %s week(s) ago.\n\n"+
+					"Follow these steps:\n"+
+					"1. Use pihole_stats_database with this week's date range to get current totals\n"+
+					"2. Use pihole_stats_database with last week's equivalent date range for comparison\n"+
+					"3. Use pihole_stats_database_top_domains with blocked=true for both periods to compare top blocked domains\n"+
+					"4. Use pihole_stats_database_top_clients for both periods to compare client activity\n"+
+					"5. Use pihole_stats_database_upstreams for both periods to compare upstream performance\n\n"+
+					"Present your findings as a trend report:\n"+
+					"- Query volume change (increase/decrease percentage)\n"+
+					"- Blocking rate change\n"+
+					"- New domains appearing in top blocked that weren't there last week\n"+
+					"- Client activity changes (new high-volume clients, departures)\n"+
+					"- Upstream DNS performance changes\n"+
+					"- Overall assessment and recommendations",
+					weeksBack),
+			)),
+		},
+	}, nil
+}
+
+func upstreamHealthHandler(_ context.Context, _ mcp.GetPromptRequest) (*mcp.GetPromptResult, error) {
+	return &mcp.GetPromptResult{
+		Description: "Upstream DNS health analysis",
+		Messages: []mcp.PromptMessage{
+			mcp.NewPromptMessage(mcp.RoleUser, mcp.NewTextContent(
+				"Perform a deep analysis of DNS resolver health on this Pi-hole instance.\n\n"+
+					"Follow these steps:\n"+
+					"1. Use pihole_stats_upstreams to get current upstream DNS server performance metrics\n"+
+					"2. Use pihole_info_ftl to check FTL engine status, cache statistics, and DNSSEC configuration\n"+
+					"3. Use pihole_info_metrics for detailed DNS operational counters\n"+
+					"4. Use pihole_stats_database_upstreams with a 7-day range to see upstream performance trends\n"+
+					"5. Use pihole_stats_query_types to understand the query type distribution\n\n"+
+					"Based on the data, analyse:\n"+
+					"- Individual upstream server health (response times, variance, reliability)\n"+
+					"- Cache hit ratio and efficiency\n"+
+					"- DNSSEC validation status\n"+
+					"- Query type distribution anomalies\n"+
+					"- Historical performance trends (improving or degrading)\n"+
+					"- Recommend specific actions: replace slow upstreams, adjust cache settings, or add redundant resolvers",
 			)),
 		},
 	}, nil

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/lloydmcl/pihole-mcp/internal/pihole"
+	"github.com/hexamatic/pihole-mcp/internal/pihole"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
@@ -15,6 +15,7 @@ func RegisterDNS(s *server.MCPServer, c *pihole.Client) {
 		mcp.NewTool("pihole_dns_get_blocking",
 			mcp.WithDescription("Get the current DNS blocking status and any active timer for temporary blocking changes."),
 			mcp.WithReadOnlyHintAnnotation(true),
+			mcp.WithOutputSchema[BlockingStatusOutput](),
 		),
 		dnsGetBlockingHandler(c),
 	)
@@ -40,7 +41,12 @@ func dnsGetBlockingHandler(c *pihole.Client) server.ToolHandlerFunc {
 	return func(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		var status pihole.BlockingStatus
 		if err := c.Get(ctx, "/dns/blocking", &status); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to get blocking status: %v", err)), nil
+			return toolError("get blocking status", err), nil
+		}
+
+		output := BlockingStatusOutput{
+			Blocking: status.Blocking,
+			Timer:    status.Timer,
 		}
 
 		text := fmt.Sprintf("**Blocking:** %s", status.Blocking)
@@ -48,7 +54,7 @@ func dnsGetBlockingHandler(c *pihole.Client) server.ToolHandlerFunc {
 			text += fmt.Sprintf(" (%.0fs remaining)", *status.Timer)
 		}
 
-		return mcp.NewToolResultText(text), nil
+		return mcp.NewToolResultStructured(output, text), nil
 	}
 }
 
@@ -68,7 +74,7 @@ func dnsSetBlockingHandler(c *pihole.Client) server.ToolHandlerFunc {
 
 		var status pihole.BlockingStatus
 		if err := c.Post(ctx, "/dns/blocking", body, &status); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to set blocking: %v", err)), nil
+			return toolError("set blocking", err), nil
 		}
 
 		action := "enabled"

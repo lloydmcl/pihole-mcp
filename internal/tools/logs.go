@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/lloydmcl/pihole-mcp/internal/pihole"
+	"github.com/hexamatic/pihole-mcp/internal/pihole"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
@@ -39,7 +39,7 @@ func logHandler(c *pihole.Client, endpoint string) server.ToolHandlerFunc {
 
 		var result pihole.LogResponse
 		if err := c.Get(ctx, path, &result); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to get logs: %v", err)), nil
+			return toolError("get logs", err), nil
 		}
 
 		if len(result.Log) == 0 {

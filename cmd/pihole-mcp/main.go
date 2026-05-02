@@ -11,10 +11,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/lloydmcl/pihole-mcp/internal/config"
-	"github.com/lloydmcl/pihole-mcp/internal/pihole"
-	piholeserver "github.com/lloydmcl/pihole-mcp/internal/server"
-	"github.com/lloydmcl/pihole-mcp/internal/telemetry"
+	"github.com/hexamatic/pihole-mcp/internal/config"
+	"github.com/hexamatic/pihole-mcp/internal/pihole"
+	piholeserver "github.com/hexamatic/pihole-mcp/internal/server"
+	"github.com/hexamatic/pihole-mcp/internal/telemetry"
 	"github.com/mark3labs/mcp-go/server"
 )
 

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/lloydmcl/pihole-mcp/internal/format"
-	"github.com/lloydmcl/pihole-mcp/internal/pihole"
+	"github.com/hexamatic/pihole-mcp/internal/format"
+	"github.com/hexamatic/pihole-mcp/internal/pihole"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
@@ -50,7 +50,7 @@ func historyGraphHandler(c *pihole.Client) server.ToolHandlerFunc {
 
 		var result pihole.HistoryResponse
 		if err := c.Get(ctx, path, &result); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to get history: %v", err)), nil
+			return toolError("get history", err), nil
 		}
 
 		if len(result.History) == 0 {
@@ -104,7 +104,7 @@ func historyClientsHandler(c *pihole.Client) server.ToolHandlerFunc {
 
 		var result pihole.ClientHistoryResponse
 		if err := c.Get(ctx, path, &result); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to get client history: %v", err)), nil
+			return toolError("get client history", err), nil
 		}
 
 		var b strings.Builder

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/lloydmcl/pihole-mcp/internal/format"
-	"github.com/lloydmcl/pihole-mcp/internal/pihole"
+	"github.com/hexamatic/pihole-mcp/internal/format"
+	"github.com/hexamatic/pihole-mcp/internal/pihole"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
@@ -63,7 +63,7 @@ func listsListHandler(c *pihole.Client) server.ToolHandlerFunc {
 
 		var result pihole.ListsResponse
 		if err := c.Get(ctx, path, &result); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to list lists: %v", err)), nil
+			return toolError("list lists", err), nil
 		}
 
 		if len(result.Lists) == 0 {
@@ -122,7 +122,7 @@ func listsAddHandler(c *pihole.Client) server.ToolHandlerFunc {
 		path := "/lists?type=" + t
 		var result pihole.ListsResponse
 		if err := c.Post(ctx, path, body, &result); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to add list: %v", err)), nil
+			return toolError("add list", err), nil
 		}
 
 		return mcp.NewToolResultText(fmt.Sprintf("**Added** %s list: %s. Run pihole_action_gravity_update to download.", t, address)), nil
@@ -146,7 +146,7 @@ func listsUpdateHandler(c *pihole.Client) server.ToolHandlerFunc {
 		path := "/lists/" + address + "?type=" + t
 		var result pihole.ListsResponse
 		if err := c.Put(ctx, path, body, &result); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to update list: %v", err)), nil
+			return toolError("update list", err), nil
 		}
 
 		return mcp.NewToolResultText(fmt.Sprintf("**Updated** list: %s.", address)), nil
@@ -160,7 +160,7 @@ func listsDeleteHandler(c *pihole.Client) server.ToolHandlerFunc {
 
 		path := "/lists/" + address + "?type=" + t
 		if err := c.Delete(ctx, path); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to delete list: %v", err)), nil
+			return toolError("delete list", err), nil
 		}
 
 		return mcp.NewToolResultText(fmt.Sprintf("**Deleted** list: %s.", address)), nil
@@ -175,7 +175,7 @@ func listsBatchDeleteHandler(c *pihole.Client) server.ToolHandlerFunc {
 		}
 
 		if err := c.Post(ctx, "/lists:batchDelete", rawJSON(items), nil); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Batch delete failed: %v", err)), nil
+			return toolError("batch delete lists", err), nil
 		}
 
 		return mcp.NewToolResultText("**Batch delete completed.**"), nil

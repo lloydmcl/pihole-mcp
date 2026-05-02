@@ -2,11 +2,13 @@ package tools
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 
-	"github.com/lloydmcl/pihole-mcp/internal/format"
-	"github.com/lloydmcl/pihole-mcp/internal/pihole"
+	"github.com/hexamatic/pihole-mcp/internal/format"
+	"github.com/hexamatic/pihole-mcp/internal/pihole"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
@@ -38,6 +40,23 @@ func RegisterInfo(s *server.MCPServer, c *pihole.Client) {
 		mcp.WithDescription("Information about the requesting client's IP address and connection. Does not require authentication."),
 		mcp.WithReadOnlyHintAnnotation(true),
 	), infoClientHandler(c))
+
+	addTool(s, mcp.NewTool("pihole_info_ftl",
+		mcp.WithDescription("FTL engine process info: PID, privacy level, client and domain counts, and database query total."),
+		detailParam,
+		mcp.WithReadOnlyHintAnnotation(true),
+	), infoFTLHandler(c))
+
+	addTool(s, mcp.NewTool("pihole_info_metrics",
+		mcp.WithDescription("Live DNS and DHCP operational metrics including cache contents, reply counts, and lease statistics."),
+		detailParam,
+		mcp.WithReadOnlyHintAnnotation(true),
+	), infoMetricsHandler(c))
+
+	addTool(s, mcp.NewTool("pihole_info_sensors",
+		mcp.WithDescription("Hardware temperature sensors with names, values, units, and paths."),
+		mcp.WithReadOnlyHintAnnotation(true),
+	), infoSensorsHandler(c))
 }
 
 func infoSystemHandler(c *pihole.Client) server.ToolHandlerFunc {
@@ -47,7 +66,7 @@ func infoSystemHandler(c *pihole.Client) server.ToolHandlerFunc {
 		var sensors pihole.SensorsInfo
 
 		if err := c.Get(ctx, "/info/system", &sysInfo); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to get system info: %v", err)), nil
+			return toolError("get system info", err), nil
 		}
 		_ = c.Get(ctx, "/info/host", &hostInfo)
 		_ = c.Get(ctx, "/info/sensors", &sensors)
@@ -105,7 +124,7 @@ func infoVersionHandler(c *pihole.Client) server.ToolHandlerFunc {
 	return func(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		var ver pihole.VersionInfo
 		if err := c.Get(ctx, "/info/version", &ver); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to get version: %v", err)), nil
+			return toolError("get version", err), nil
 		}
 
 		var b strings.Builder
@@ -124,7 +143,7 @@ func infoDatabaseHandler(c *pihole.Client) server.ToolHandlerFunc {
 	return func(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		var db pihole.DatabaseInfo
 		if err := c.Get(ctx, "/info/database", &db); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to get database info: %v", err)), nil
+			return toolError("get database info", err), nil
 		}
 
 		size := format.SizeWithUnit(db.Database.Size, db.Database.Unit)
@@ -140,7 +159,7 @@ func infoMessagesHandler(c *pihole.Client) server.ToolHandlerFunc {
 	return func(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		var msgs pihole.MessagesResponse
 		if err := c.Get(ctx, "/info/messages", &msgs); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to get messages: %v", err)), nil
+			return toolError("get messages", err), nil
 		}
 
 		if len(msgs.Messages) == 0 {
@@ -161,11 +180,111 @@ func infoClientHandler(c *pihole.Client) server.ToolHandlerFunc {
 	return func(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		var info pihole.ClientInfo
 		if err := c.Get(ctx, "/info/client", &info); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to get client info: %v", err)), nil
+			return toolError("get client info", err), nil
 		}
 
 		return mcp.NewToolResultText(fmt.Sprintf(
 			"**Remote address:** %s | **HTTP:** %s | **Method:** %s",
 			info.RemoteAddr, info.HTTPVersion, info.Method)), nil
+	}
+}
+
+func infoFTLHandler(c *pihole.Client) server.ToolHandlerFunc {
+	return func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		var ftl pihole.FTLInfo
+		if err := c.Get(ctx, "/info/ftl", &ftl); err != nil {
+			return toolError("get FTL info", err), nil
+		}
+
+		detail := getDetail(req)
+		d := ftl.FTL
+
+		if detail == "minimal" {
+			return mcp.NewToolResultText(fmt.Sprintf(
+				"FTL PID: %s | Privacy: %d | Active clients: %s | Gravity: %s",
+				format.Number(d.PID), d.PrivacyLevel,
+				format.Number(d.Clients.Active), format.Number(d.Database.Gravity))), nil
+		}
+
+		var b strings.Builder
+		fmt.Fprintf(&b, "**PID:** %s\n", format.Number(d.PID))
+		fmt.Fprintf(&b, "**Uptime:** %.0fs\n", d.Uptime)
+		fmt.Fprintf(&b, "**Privacy level:** %d\n", d.PrivacyLevel)
+		fmt.Fprintf(&b, "**Query frequency:** %.2f/s\n", d.QueryFrequency)
+		fmt.Fprintf(&b, "**Active clients:** %s of %s known\n",
+			format.Number(d.Clients.Active), format.Number(d.Clients.Total))
+		fmt.Fprintf(&b, "**Gravity domains:** %s across %s lists in %s groups\n",
+			format.Number(d.Database.Gravity), format.Number(d.Database.Lists), format.Number(d.Database.Groups))
+		fmt.Fprintf(&b, "**Memory:** %.2f%% | **CPU:** %.2f%%\n", d.MemPercent, d.CPUPercent)
+		fmt.Fprintf(&b, "**Destructive operations allowed:** %v\n", d.AllowDestructive)
+
+		return mcp.NewToolResultText(b.String()), nil
+	}
+}
+
+func infoMetricsHandler(c *pihole.Client) server.ToolHandlerFunc {
+	return func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		var metrics pihole.MetricsInfo
+		if err := c.Get(ctx, "/info/metrics", &metrics); err != nil {
+			return toolError("get metrics", err), nil
+		}
+
+		detail := getDetail(req)
+
+		if detail == "minimal" {
+			return mcp.NewToolResultText(fmt.Sprintf(
+				"Metrics: %d top-level keys", len(metrics.Metrics))), nil
+		}
+
+		if detail == "full" {
+			metricsJSON, err := json.MarshalIndent(metrics.Metrics, "", "  ")
+			if err != nil {
+				return mcp.NewToolResultError(fmt.Sprintf("Failed to format metrics: %v", err)), nil
+			}
+			var b strings.Builder
+			b.WriteString("```json\n")
+			b.Write(metricsJSON)
+			b.WriteString("\n```")
+			return mcp.NewToolResultText(b.String()), nil
+		}
+
+		// normal: key-value pairs
+		keys := make([]string, 0, len(metrics.Metrics))
+		for k := range metrics.Metrics {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+
+		var b strings.Builder
+		for _, k := range keys {
+			v := metrics.Metrics[k]
+			if nested, ok := v.(map[string]any); ok {
+				fmt.Fprintf(&b, "**%s:** %d sub-keys\n", k, len(nested))
+			} else {
+				fmt.Fprintf(&b, "**%s:** %v\n", k, v)
+			}
+		}
+
+		return mcp.NewToolResultText(b.String()), nil
+	}
+}
+
+func infoSensorsHandler(c *pihole.Client) server.ToolHandlerFunc {
+	return func(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		var sensors pihole.SensorsInfo
+		if err := c.Get(ctx, "/info/sensors", &sensors); err != nil {
+			return toolError("get sensors", err), nil
+		}
+
+		if len(sensors.Sensors.Temperatures) == 0 {
+			return mcp.NewToolResultText("No sensor data available."), nil
+		}
+
+		var b strings.Builder
+		for _, t := range sensors.Sensors.Temperatures {
+			fmt.Fprintf(&b, "**%s:** %.1f%s\n", t.Name, t.Value, t.Unit)
+		}
+
+		return mcp.NewToolResultText(b.String()), nil
 	}
 }

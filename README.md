@@ -6,11 +6,11 @@
 
 A production-grade [MCP](https://modelcontextprotocol.io/) server for [Pi-hole](https://pi-hole.net/) v6.
 
-**55 tools** | **6 prompts** | **5 resources** | Single Go binary | 9MB Docker image
+**68 tools** | **9 prompts** | **5 resources** | Single Go binary | 9MB Docker image
 
 [![Licence: MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
-[![Go Report Card](https://goreportcard.com/badge/github.com/lloydmcl/pihole-mcp)](https://goreportcard.com/report/github.com/lloydmcl/pihole-mcp)
-[![CI](https://github.com/lloydmcl/pihole-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/lloydmcl/pihole-mcp/actions/workflows/ci.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/hexamatic/pihole-mcp)](https://goreportcard.com/report/github.com/hexamatic/pihole-mcp)
+[![CI](https://github.com/hexamatic/pihole-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/hexamatic/pihole-mcp/actions/workflows/ci.yml)
 
 </div>
 
@@ -41,18 +41,18 @@ Then install the binary via one of the methods below.
 ### Go Install
 
 ```bash
-go install github.com/lloydmcl/pihole-mcp/cmd/pihole-mcp@latest
+go install github.com/hexamatic/pihole-mcp/cmd/pihole-mcp@latest
 ```
 
 ### Docker
 
 ```bash
-docker pull ghcr.io/lloydmcl/pihole-mcp:latest
+docker pull ghcr.io/hexamatic/pihole-mcp:latest
 ```
 
 ### Binary Download
 
-Pre-built binaries for Linux, macOS, and Windows (amd64 and arm64) are available on the [Releases](https://github.com/lloydmcl/pihole-mcp/releases) page.
+Pre-built binaries for Linux, macOS, and Windows (amd64 and arm64) are available on the [Releases](https://github.com/hexamatic/pihole-mcp/releases) page.
 
 ## Configuration
 
@@ -217,7 +217,7 @@ For clients that support Docker-based MCP servers:
       "args": ["run", "-i", "--rm",
         "-e", "PIHOLE_URL=http://192.168.1.2",
         "-e", "PIHOLE_PASSWORD=your-password",
-        "ghcr.io/lloydmcl/pihole-mcp:latest"]
+        "ghcr.io/hexamatic/pihole-mcp:latest"]
     }
   }
 }

@@ -2,7 +2,7 @@
 
 ## Reporting Security Vulnerabilities
 
-If you discover a security vulnerability in this MCP server, please report it **privately** using [GitHub Security Advisories](https://github.com/lloydmcl/pihole-mcp/security/advisories/new) rather than the public issue tracker.
+If you discover a security vulnerability in this MCP server, please report it **privately** using [GitHub Security Advisories](https://github.com/hexamatic/pihole-mcp/security/advisories/new) rather than the public issue tracker.
 
 Please include:
 

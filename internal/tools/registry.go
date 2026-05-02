@@ -2,7 +2,7 @@
 package tools
 
 import (
-	"github.com/lloydmcl/pihole-mcp/internal/pihole"
+	"github.com/hexamatic/pihole-mcp/internal/pihole"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
@@ -26,6 +26,7 @@ func RegisterAll(s *server.MCPServer, c *pihole.Client) {
 	RegisterDHCP(s, c)
 	RegisterLogs(s, c)
 	RegisterTeleporter(s, c)
+	RegisterAuth(s, c)
 }
 
 // addTool registers a tool with tracing middleware.
